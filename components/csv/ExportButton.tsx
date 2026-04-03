@@ -7,7 +7,7 @@ import { Download } from "lucide-react";
 import { exportToCsv } from "@/lib/csv";
 
 export function ExportButton() {
-  const transactions = useQuery(api.transactions.listTransactions);
+  const transactions = useQuery(api.transactions.listTransactions, "skip");
 
   function handleExport() {
     if (!transactions || transactions.length === 0) return;

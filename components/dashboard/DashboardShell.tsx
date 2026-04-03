@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+// TODO: Re-enable Convex queries once auth is working
+// import { useQuery } from "convex/react";
+// import { api } from "@/convex/_generated/api";
 import { usePrice } from "@/hooks/usePrice";
 import { useMetrics } from "@/hooks/useMetrics";
 import { PrimaryMetricsCard } from "./PrimaryMetricsCard";
@@ -15,7 +16,9 @@ import { Separator } from "@/components/ui/separator";
 export function DashboardShell() {
   const priceState = usePrice();
   const { summary, metrics } = useMetrics(priceState.effectivePrice);
-  const transactions = useQuery(api.transactions.listTransactions) ?? [];
+  // TODO: Replace with real Convex query once auth is working
+  // const transactions = useQuery(api.transactions.listTransactions) ?? [];
+  const transactions: never[] = [];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">

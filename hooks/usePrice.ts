@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAction } from "convex/react";
-import { api } from "@/convex/_generated/api";
+// TODO: Re-enable once auth is working
+// import { useAction } from "convex/react";
+// import { api } from "@/convex/_generated/api";
 
 export interface PriceState {
   fetchedPrice: number | null;
@@ -16,7 +17,8 @@ export interface PriceState {
 }
 
 export function usePrice(): PriceState {
-  const fetchAction = useAction(api.prices.fetchCspxPrice);
+  // TODO: Re-enable Convex action once auth is working
+  // const fetchAction = useAction(api.prices.fetchCspxPrice);
 
   const [fetchedPrice, setFetchedPrice] = useState<number | null>(null);
   const [overridePrice, setOverridePriceState] = useState<number | null>(null);
@@ -25,18 +27,19 @@ export function usePrice(): PriceState {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await fetchAction({});
-      setFetchedPrice(result.priceUSD);
-      setFetchedAt(result.fetchedAt);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to fetch price");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchAction]);
+    // TODO: Re-enable once auth is working
+    // setIsLoading(true);
+    // setError(null);
+    // try {
+    //   const result = await fetchAction({});
+    //   setFetchedPrice(result.priceUSD);
+    //   setFetchedAt(result.fetchedAt);
+    // } catch (e) {
+    //   setError(e instanceof Error ? e.message : "Failed to fetch price");
+    // } finally {
+    //   setIsLoading(false);
+    // }
+  }, []);
 
   useEffect(() => {
     refresh();

@@ -29,7 +29,7 @@ export function AddTransactionSheet() {
 
   const addBuy = useMutation(api.transactions.addBuyTransaction);
   const addSell = useMutation(api.transactions.addSellTransaction);
-  const transactions = useQuery(api.transactions.listTransactions) ?? [];
+  const transactions = useQuery(api.transactions.listTransactions, "skip") ?? [];
 
   const totalUnitsHeld = computeTotalUnits(transactions);
   const priceNum = parseFloat(price) || 0;
