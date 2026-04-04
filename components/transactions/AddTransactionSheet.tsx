@@ -93,12 +93,15 @@ export function AddTransactionSheet() {
         <Plus className="h-4 w-4 mr-1" />
         Add Transaction
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md overflow-y-auto "
+      >
         <SheetHeader>
           <SheetTitle>Add Transaction</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5 px-4">
           {/* Type toggle */}
           <div className="space-y-1.5">
             <Label>Type</Label>
