@@ -1,23 +1,23 @@
-import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
-import "./globals.css";
-import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
-import { Providers } from "@/components/providers";
-import { Header } from "@/components/Header";
+import { Header } from '@/components/Header';
+import { Providers } from '@/components/providers';
+import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
+import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import './globals.css';
 
 const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
+  variable: '--font-sans',
+  subsets: ['latin'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
+  variable: '--font-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "CSPX Tracker",
-  description: "Personal IBKR investment tracker",
+  title: 'CSPX Tracker',
+  description: 'Personal IBKR investment tracker',
 };
 
 export default async function RootLayout({
