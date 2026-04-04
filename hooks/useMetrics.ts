@@ -19,7 +19,7 @@ export interface UseMetricsResult {
 }
 
 export function useMetrics(effectivePrice: number | null): UseMetricsResult {
-  const summary = useQuery(api.transactions.getPortfolioSummary, "skip");
+  const summary = useQuery(api.transactions.getPortfolioSummary);
 
   const metrics = useMemo(() => {
     if (!summary || effectivePrice === null) return null;

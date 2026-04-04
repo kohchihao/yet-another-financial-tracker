@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
-import { exportToCsv } from "@/lib/csv";
+import { Button } from '@/components/ui/button';
+import { api } from '@/convex/_generated/api';
+import { exportToCsv } from '@/lib/csv';
+import { useQuery } from 'convex/react';
+import { Download } from 'lucide-react';
 
 export function ExportButton() {
-  const transactions = useQuery(api.transactions.listTransactions, "skip");
+  const transactions = useQuery(api.transactions.listTransactions);
 
   function handleExport() {
     if (!transactions || transactions.length === 0) return;
@@ -21,13 +21,13 @@ export function ExportButton() {
         transactionCostUSD: t.transactionCostUSD,
         investedCapitalUSD: t.investedCapitalUSD,
         totalCapitalOutputUSD: t.totalCapitalOutputUSD,
-      }))
+      })),
     );
 
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const today = new Date().toISOString().split("T")[0];
+    const a = document.createElement('a');
+    const today = new Date().toISOString().split('T')[0];
     a.href = url;
     a.download = `cspx-transactions-${today}.csv`;
     a.click();
