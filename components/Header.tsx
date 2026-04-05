@@ -15,8 +15,8 @@ export function Header() {
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-        <span className="font-semibold tracking-tight">CSPX Tracker</span>
+      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        <span className="font-semibold tracking-tight">QianTracker</span>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
