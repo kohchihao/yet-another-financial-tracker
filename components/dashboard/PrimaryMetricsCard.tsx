@@ -20,7 +20,6 @@ export function PrimaryMetricsCard({ metrics }: PrimaryMetricsCardProps) {
           <p className="text-3xl font-bold tabular-nums">
             {metrics ? formatUSD(metrics.marketValue) : '—'}
           </p>
-          ~
         </CardContent>
       </Card>
 
