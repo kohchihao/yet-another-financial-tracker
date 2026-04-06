@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { formatUSD, formatUnits } from "@/lib/calculations";
+import { usePrivacy } from "@/context/PrivacyContext";
 import type { Id } from "@/convex/_generated/dataModel";
 
 interface TransactionRowProps {
@@ -31,21 +32,25 @@ export function TransactionRow({
   totalCapitalOutputUSD,
 }: TransactionRowProps) {
   const [deleteId, setDeleteId] = useState<Id<"transactions"> | null>(null);
+  const { isPrivate } = usePrivacy();
+
+  const mu = (v: string) => (isPrivate ? "$****" : v);
+  const mun = (v: string) => (isPrivate ? "****" : v);
 
   return (
     <>
       <TableRow>
         <TableCell className="text-sm tabular-nums whitespace-nowrap">{date}</TableCell>
-        <TableCell className="text-sm tabular-nums text-right">{formatUnits(units)}</TableCell>
-        <TableCell className="text-sm tabular-nums text-right">{formatUSD(priceUSD)}</TableCell>
+        <TableCell className="text-sm tabular-nums text-right">{mun(formatUnits(units))}</TableCell>
+        <TableCell className="text-sm tabular-nums text-right">{mu(formatUSD(priceUSD))}</TableCell>
         {/* Hidden on mobile */}
         <TableCell className="hidden sm:table-cell text-sm tabular-nums text-right">
-          {formatUSD(investedCapitalUSD)}
+          {mu(formatUSD(investedCapitalUSD))}
         </TableCell>
         <TableCell className="hidden sm:table-cell text-sm tabular-nums text-right">
-          {formatUSD(transactionCostUSD)}
+          {mu(formatUSD(transactionCostUSD))}
         </TableCell>
-        <TableCell className="text-sm tabular-nums text-right">{formatUSD(totalCapitalOutputUSD)}</TableCell>
+        <TableCell className="text-sm tabular-nums text-right">{mu(formatUSD(totalCapitalOutputUSD))}</TableCell>
         <TableCell className="text-center">
           <Badge
             variant={type === "BUY" ? "default" : "destructive"}

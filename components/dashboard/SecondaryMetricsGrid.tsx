@@ -1,9 +1,12 @@
+"use client";
+
 import { Card, CardContent } from "@/components/ui/card";
-import { SummaryMetric } from "./SummaryMetric";
-import { PriceCard } from "./PriceCard";
+import { usePrivacy } from "@/context/PrivacyContext";
 import { formatUSD, formatUnits } from "@/lib/calculations";
 import type { PriceState } from "@/hooks/usePrice";
 import type { Metrics } from "@/lib/calculations";
+import { SummaryMetric } from "./SummaryMetric";
+import { PriceCard } from "./PriceCard";
 
 interface SecondaryMetricsGridProps {
   priceState: PriceState;
@@ -23,6 +26,16 @@ export function SecondaryMetricsGrid({
   summary,
   metrics,
 }: SecondaryMetricsGridProps) {
+  const { isPrivate } = usePrivacy();
+
+  function maskUSD(value: string) {
+    return isPrivate ? "$****" : value;
+  }
+
+  function maskUnits(value: string) {
+    return isPrivate ? "****" : value;
+  }
+
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2 sm:col-span-1">
@@ -33,7 +46,7 @@ export function SecondaryMetricsGrid({
         <CardContent className="pt-4">
           <SummaryMetric
             label="Total Units Held"
-            value={summary ? formatUnits(summary.totalUnits) : "—"}
+            value={summary ? maskUnits(formatUnits(summary.totalUnits)) : "—"}
           />
         </CardContent>
       </Card>
@@ -42,7 +55,7 @@ export function SecondaryMetricsGrid({
         <CardContent className="pt-4">
           <SummaryMetric
             label="Avg Cost / Unit"
-            value={metrics ? formatUSD(metrics.avgCostPerUnit) : "—"}
+            value={metrics ? maskUSD(formatUSD(metrics.avgCostPerUnit)) : "—"}
           />
         </CardContent>
       </Card>
@@ -51,7 +64,7 @@ export function SecondaryMetricsGrid({
         <CardContent className="pt-4">
           <SummaryMetric
             label="Avg Cost / Unit w/ Fees"
-            value={metrics ? formatUSD(metrics.avgCostPerUnitWithFees) : "—"}
+            value={metrics ? maskUSD(formatUSD(metrics.avgCostPerUnitWithFees)) : "—"}
           />
         </CardContent>
       </Card>
@@ -60,7 +73,7 @@ export function SecondaryMetricsGrid({
         <CardContent className="pt-4">
           <SummaryMetric
             label="Total Invested Capital"
-            value={summary ? formatUSD(summary.totalInvestedCapital) : "—"}
+            value={summary ? maskUSD(formatUSD(summary.totalInvestedCapital)) : "—"}
           />
         </CardContent>
       </Card>
@@ -69,7 +82,7 @@ export function SecondaryMetricsGrid({
         <CardContent className="pt-4">
           <SummaryMetric
             label="Total Transaction Costs"
-            value={summary ? formatUSD(summary.totalTransactionCost) : "—"}
+            value={summary ? maskUSD(formatUSD(summary.totalTransactionCost)) : "—"}
           />
         </CardContent>
       </Card>
