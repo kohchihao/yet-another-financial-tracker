@@ -47,3 +47,4 @@ The `transactions` table stores: `userId`, `type` (BUY/SELL), `date`, `priceUSD`
 - Convex functions in `convex/` export via `api` object — always import from `convex/_generated/api`
 - Components are split into `components/dashboard/`, `components/transactions/`, `components/csv/`, and `components/ui/` (shadcn primitives)
 - Path alias `@/*` maps to the project root
+- **Middleware:** Next.js 16 uses `proxy.ts` (project root) as the middleware entry point — `middleware.ts` is deprecated and must not be used
