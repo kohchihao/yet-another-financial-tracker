@@ -4,12 +4,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { TransactionRow } from "./TransactionRow";
-import type { Doc } from "@/convex/_generated/dataModel";
+} from '@/components/ui/table';
+import type { Doc } from '@/convex/_generated/dataModel';
+import { TransactionRow } from './TransactionRow';
 
 interface TransactionTableProps {
-  transactions: Doc<"transactions">[];
+  transactions: Doc<'transactions'>[];
 }
 
 export function TransactionTable({ transactions }: TransactionTableProps) {
@@ -24,18 +24,24 @@ export function TransactionTable({ transactions }: TransactionTableProps) {
   return (
     <div className="overflow-x-auto rounded-md border">
       <Table>
-        <TableHeader className="sticky top-0 bg-background z-10">
+        <TableHeader className="sticky top-0 z-10 bg-muted">
           <TableRow>
             <TableHead className="whitespace-nowrap">Date</TableHead>
-            <TableHead className="text-right whitespace-nowrap">Units</TableHead>
-            <TableHead className="text-right whitespace-nowrap">Price (USD)</TableHead>
+            <TableHead className="text-right whitespace-nowrap">
+              Units
+            </TableHead>
+            <TableHead className="text-right whitespace-nowrap">
+              Price (USD)
+            </TableHead>
             <TableHead className="hidden sm:table-cell text-right whitespace-nowrap">
               Invested Capital (USD)
             </TableHead>
             <TableHead className="hidden sm:table-cell text-right whitespace-nowrap">
               Tx Cost (USD)
             </TableHead>
-            <TableHead className="text-right whitespace-nowrap">Total Output (USD)</TableHead>
+            <TableHead className="text-right whitespace-nowrap">
+              Total Output (USD)
+            </TableHead>
             <TableHead className="text-center">Type</TableHead>
             <TableHead />
           </TableRow>

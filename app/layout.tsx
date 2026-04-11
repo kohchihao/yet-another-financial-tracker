@@ -1,4 +1,3 @@
-import { Header } from '@/components/Header';
 import { Providers } from '@/components/providers';
 import { ConvexAuthNextjsServerProvider } from '@convex-dev/auth/nextjs/server';
 import type { Metadata } from 'next';
@@ -33,10 +32,7 @@ export default async function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col bg-background text-foreground">
-          <Providers>
-            <Header />
-            <main className="flex-1">{children}</main>
-          </Providers>
+          <Providers>{children}</Providers>
         </body>
       </html>
     </ConvexAuthNextjsServerProvider>
