@@ -38,9 +38,28 @@ npx convex dev    # Start Convex backend separately (if needed)
 
 GitHub OAuth via `@convex-dev/auth`. Access is restricted to a single authorized account via the `ALLOWED_GITHUB_LOGIN` env var checked in `convex/auth.ts`. Unauthenticated users are redirected to `/sign-in`.
 
+### MCP server
+
+`app/api/mcp/route.ts` exposes an MCP endpoint (Streamable HTTP, via `mcp-handler`) so AI tools can work with transactions. Tools are defined in `lib/mcp/server.ts`:
+
+- `add_purchase` — records a BUY (rejects future dates and identical retries within 60s unless `allowDuplicate`)
+- `list_transactions` — all BUYs and SELLs, latest first, with a totals summary
+- `list_recent_transactions` — same, limited to the last N months (default 6, Singapore time)
+- `get_portfolio_summary` — net units, invested capital, total capital output, fees and average cost, plus market value and returns at the live CSPX.L price (or a given `priceUSD`)
+
+MCP clients have no Convex Auth session, so they authenticate with personal API keys (`Authorization: Bearer yaft_…`), created and revoked from the dashboard's "AI access" dialog. Only a SHA-256 hash of each key is stored (`apiKeys` table). The route passes the raw key to the functions in `convex/mcp.ts`, which resolve it to a user server-side. Shared trade logic (derived fields, validation, listing) lives in `convex/lib/transactions.ts` and is used by both the UI mutations and MCP.
+
+Connect a client, e.g. Claude Code:
+
+```bash
+claude mcp add --transport http cspx-tracker https://<host>/api/mcp --header "Authorization: Bearer yaft_…"
+```
+
 ### Schema
 
 The `transactions` table stores: `userId`, `type` (BUY/SELL), `date`, `priceUSD`, `units`, `transactionCostUSD`, `investedCapitalUSD`, `totalCapitalOutputUSD`, `createdAt`. Indexed by `by_userId` and `by_userId_date`.
+
+The `apiKeys` table stores: `userId`, `name`, `hashedKey`, `prefix`, `createdAt`, `lastUsedAt?`, `revokedAt?`. Indexed by `by_hashedKey` and `by_userId`.
 
 ### Key Conventions
 

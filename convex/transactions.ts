@@ -2,6 +2,11 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
+import {
+  insertTrade,
+  listUserTransactions,
+  summarisePortfolio,
+} from "./lib/transactions";
 
 /**
  * Auth guard used at the top of every query and mutation.
@@ -28,15 +33,7 @@ export const listTransactions = query({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUser(ctx);
-    const transactions = await ctx.db
-      .query("transactions")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-    // Sort latest-first by date, then by createdAt desc as tiebreaker
-    return transactions.sort((a, b) => {
-      if (b.date !== a.date) return b.date.localeCompare(a.date);
-      return b.createdAt - a.createdAt;
-    });
+    return listUserTransactions(ctx, userId);
   },
 });
 
@@ -65,25 +62,7 @@ export const getPortfolioSummary = query({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect();
 
-    return transactions.reduce(
-      (acc, t) => {
-        const sign = t.type === "BUY" ? 1 : -1;
-        return {
-          totalUnits: acc.totalUnits + sign * t.units,
-          totalInvestedCapital:
-            acc.totalInvestedCapital + sign * t.investedCapitalUSD,
-          totalCapitalOutput:
-            acc.totalCapitalOutput + sign * t.totalCapitalOutputUSD,
-          totalTransactionCost: acc.totalTransactionCost + t.transactionCostUSD,
-        };
-      },
-      {
-        totalUnits: 0,
-        totalInvestedCapital: 0,
-        totalCapitalOutput: 0,
-        totalTransactionCost: 0,
-      }
-    );
+    return summarisePortfolio(transactions);
   },
 });
 
@@ -106,25 +85,7 @@ export const addBuyTransaction = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireUser(ctx);
-    // Normalise units to 4dp to avoid floating-point drift accumulating over many trades
-    const units = Math.round(args.units * 10000) / 10000;
-    // Gross share cost (price × units), stored to the nearest cent
-    const investedCapitalUSD = Math.round(args.priceUSD * units * 100) / 100;
-    // Total cash out of pocket = share cost + broker fee
-    const totalCapitalOutputUSD =
-      Math.round((investedCapitalUSD + args.transactionCostUSD) * 100) / 100;
-
-    return ctx.db.insert("transactions", {
-      userId,
-      type: "BUY",
-      date: args.date,
-      priceUSD: args.priceUSD,
-      units,
-      transactionCostUSD: args.transactionCostUSD,
-      investedCapitalUSD,
-      totalCapitalOutputUSD,
-      createdAt: Date.now(),
-    });
+    return insertTrade(ctx, userId, "BUY", args);
   },
 });
 
@@ -173,21 +134,7 @@ export const addSellTransaction = mutation({
       );
     }
 
-    const investedCapitalUSD = Math.round(args.priceUSD * units * 100) / 100;
-    const totalCapitalOutputUSD =
-      Math.round((investedCapitalUSD + args.transactionCostUSD) * 100) / 100;
-
-    return ctx.db.insert("transactions", {
-      userId,
-      type: "SELL",
-      date: args.date,
-      priceUSD: args.priceUSD,
-      units,
-      transactionCostUSD: args.transactionCostUSD,
-      investedCapitalUSD,
-      totalCapitalOutputUSD,
-      createdAt: Date.now(),
-    });
+    return insertTrade(ctx, userId, "SELL", args);
   },
 });
 
@@ -237,22 +184,8 @@ export const importTransactions = mutation({
 
     for (const row of args.rows) {
       // Apply the same normalisation as individual add mutations
-      const units = Math.round(row.units * 10000) / 10000;
-      const investedCapitalUSD = Math.round(row.priceUSD * units * 100) / 100;
-      const totalCapitalOutputUSD =
-        Math.round((investedCapitalUSD + row.transactionCostUSD) * 100) / 100;
-
-      await ctx.db.insert("transactions", {
-        userId,
-        type: row.type,
-        date: row.date,
-        priceUSD: row.priceUSD,
-        units,
-        transactionCostUSD: row.transactionCostUSD,
-        investedCapitalUSD,
-        totalCapitalOutputUSD,
-        createdAt: Date.now(),
-      });
+      const { type, ...trade } = row;
+      await insertTrade(ctx, userId, type, trade);
       inserted++;
     }
 

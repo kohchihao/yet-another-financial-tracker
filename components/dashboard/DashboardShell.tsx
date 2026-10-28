@@ -2,6 +2,7 @@
 
 import { ExportButton } from '@/components/csv/ExportButton';
 import { ImportDialog } from '@/components/csv/ImportDialog';
+import { ApiKeysDialog } from '@/components/mcp/ApiKeysDialog';
 import { AddTransactionSheet } from '@/components/transactions/AddTransactionSheet';
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { Separator } from '@/components/ui/separator';
@@ -35,6 +36,7 @@ export function DashboardShell() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-sm font-semibold">Transactions</h2>
         <div className="flex items-center gap-2 flex-wrap">
+          <ApiKeysDialog />
           <ExportButton />
           <ImportDialog />
           <AddTransactionSheet />
