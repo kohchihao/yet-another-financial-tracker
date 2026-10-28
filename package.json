@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "run-p --print-label dev:backend dev:frontend",
+    "dev:frontend": "next dev",
+    "dev:backend": "convex dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:convex": "convex deploy"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
@@ -43,6 +46,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "npm-run-all2": "^8.0.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

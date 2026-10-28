@@ -15,10 +15,12 @@ Convex agent skills for common tasks can be installed by running `npx convex ai-
 ## Commands
 
 ```bash
-npm run dev       # Start Next.js dev server (also starts Convex in watch mode)
-npm run build     # Production build
-npm run lint      # Run ESLint
-npx convex dev    # Start Convex backend separately (if needed)
+npm run dev            # Start Convex (watch mode) and Next.js dev servers together
+npm run dev:backend    # Convex dev only
+npm run dev:frontend   # Next.js dev only
+npm run build          # Production build
+npm run lint           # Run ESLint
+npm run deploy:convex  # Push convex/ to production
 ```
 
 ## Architecture
