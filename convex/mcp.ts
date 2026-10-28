@@ -14,6 +14,7 @@ import {
   deriveTradeFields,
   insertTrade,
   listUserTransactions,
+  summarisePortfolio,
 } from "./lib/transactions";
 import type { Doc } from "./_generated/dataModel";
 
@@ -123,5 +124,21 @@ export const listTransactions = query({
     }
     const rows = await listUserTransactions(ctx, userId, args.sinceDate);
     return rows.map(toPublicTransaction);
+  },
+});
+
+/**
+ * Net position totals for the key owner — the same figures the dashboard
+ * summary uses (see `summarisePortfolio`).
+ */
+export const getPortfolioSummary = query({
+  args: { apiKey: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await requireApiKeyUser(ctx, args.apiKey);
+    const rows = await ctx.db
+      .query("transactions")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    return summarisePortfolio(rows);
   },
 });

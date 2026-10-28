@@ -2,7 +2,11 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
-import { insertTrade, listUserTransactions } from "./lib/transactions";
+import {
+  insertTrade,
+  listUserTransactions,
+  summarisePortfolio,
+} from "./lib/transactions";
 
 /**
  * Auth guard used at the top of every query and mutation.
@@ -58,25 +62,7 @@ export const getPortfolioSummary = query({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect();
 
-    return transactions.reduce(
-      (acc, t) => {
-        const sign = t.type === "BUY" ? 1 : -1;
-        return {
-          totalUnits: acc.totalUnits + sign * t.units,
-          totalInvestedCapital:
-            acc.totalInvestedCapital + sign * t.investedCapitalUSD,
-          totalCapitalOutput:
-            acc.totalCapitalOutput + sign * t.totalCapitalOutputUSD,
-          totalTransactionCost: acc.totalTransactionCost + t.transactionCostUSD,
-        };
-      },
-      {
-        totalUnits: 0,
-        totalInvestedCapital: 0,
-        totalCapitalOutput: 0,
-        totalTransactionCost: 0,
-      }
-    );
+    return summarisePortfolio(transactions);
   },
 });
 

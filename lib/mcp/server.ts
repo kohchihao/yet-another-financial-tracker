@@ -3,7 +3,9 @@ import { ConvexError } from "convex/values";
 import type { FunctionReturnType } from "convex/server";
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import YahooFinance from "yahoo-finance2";
 import { api } from "@/convex/_generated/api";
+import { deriveMetrics } from "@/lib/calculations";
 import { monthsAgo, todayInAppTimeZone } from "./dates";
 
 type Transaction = FunctionReturnType<typeof api.mcp.listTransactions>[number];
@@ -34,6 +36,21 @@ function summarise(transactions: Transaction[]) {
     totalFeesUSD: round(sum(transactions, (t) => t.transactionCostUSD), 2),
   };
 }
+
+/**
+ * Live CSPX.L price, fetched here rather than via the `fetchCspxPrice` Convex
+ * action because that action requires a Convex Auth session.
+ */
+async function fetchCspxPrice(): Promise<number> {
+  const quote = await new YahooFinance().quote("CSPX.L");
+  if (!quote.regularMarketPrice) {
+    throw new Error("Yahoo Finance returned no price for CSPX.L");
+  }
+  return quote.regularMarketPrice;
+}
+
+/** Ratio (0.1234) → percentage rounded to 2dp (12.34). */
+const pct = (ratio: number) => round(ratio * 100, 2);
 
 function jsonResult(data: Record<string, unknown>) {
   return {
@@ -129,6 +146,82 @@ export function registerTrackerTools(server: McpServer): void {
           apiKey: requireApiKey(ctx.http?.authInfo?.token),
         });
         return jsonResult({ summary: summarise(transactions), transactions });
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_portfolio_summary",
+    {
+      title: "Get portfolio summary",
+      description:
+        "Current CSPX position: units held, invested capital (cost of shares), " +
+        "total capital output (cost incl. fees), fees paid and average cost per " +
+        "unit. Also returns market value and returns at the live CSPX.L price " +
+        "(or `priceUSD` if given). These are the same figures as the dashboard. " +
+        "Percentages are already ×100 (12.34 means 12.34%). All amounts are USD.",
+      inputSchema: z.object({
+        priceUSD: z
+          .number()
+          .positive()
+          .optional()
+          .describe(
+            "Price per unit to value the position at. Omit to use the live price."
+          ),
+      }),
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    async ({ priceUSD }, ctx) => {
+      try {
+        const summary = await getConvex().query(api.mcp.getPortfolioSummary, {
+          apiKey: requireApiKey(ctx.http?.authInfo?.token),
+        });
+        const holdings = {
+          units: round(summary.totalUnits, 4),
+          investedCapitalUSD: round(summary.totalInvestedCapital, 2),
+          totalCapitalOutputUSD: round(summary.totalCapitalOutput, 2),
+          totalFeesUSD: round(summary.totalTransactionCost, 2),
+        };
+
+        let price: { priceUSD: number; source: "live" | "provided" };
+        if (priceUSD !== undefined) {
+          price = { priceUSD, source: "provided" };
+        } else {
+          try {
+            price = { priceUSD: await fetchCspxPrice(), source: "live" };
+          } catch (error) {
+            console.error("[mcp] price fetch failed", error);
+            return jsonResult({
+              holdings,
+              price: null,
+              performance: null,
+              note:
+                "Live price unavailable. Call again with priceUSD to get " +
+                "market value and returns.",
+            });
+          }
+        }
+
+        const m = deriveMetrics(summary, price.priceUSD);
+        return jsonResult({
+          holdings: {
+            ...holdings,
+            avgCostPerUnitUSD: round(m.avgCostPerUnit, 4),
+            avgCostPerUnitWithFeesUSD: round(m.avgCostPerUnitWithFees, 4),
+          },
+          price: { ...price, asOf: new Date().toISOString() },
+          performance: {
+            marketValueUSD: round(m.marketValue, 2),
+            // Market value vs. cost including fees — the dashboard's headline gain.
+            gainLossUSD: round(m.capitalGainLoss, 2),
+            gainLossPct: pct(m.capitalGainLossPct),
+            // Market value vs. cost of shares only, ignoring fees.
+            returnOnInvestedCapitalUSD: round(m.roic, 2),
+            returnOnInvestedCapitalPct: pct(m.roicPct),
+          },
+        });
       } catch (error) {
         return errorResult(error);
       }

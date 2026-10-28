@@ -76,6 +76,42 @@ export async function insertTrade(
 }
 
 /**
+ * Net position totals across a user's trades. SELLs subtract their own
+ * capital fields from the running totals; fees are summed across all trades.
+ *
+ * Shared by the dashboard summary query and the MCP endpoint.
+ */
+export function summarisePortfolio(
+  transactions: Array<{
+    type: TradeType;
+    units: number;
+    investedCapitalUSD: number;
+    totalCapitalOutputUSD: number;
+    transactionCostUSD: number;
+  }>
+) {
+  return transactions.reduce(
+    (acc, t) => {
+      const sign = t.type === "BUY" ? 1 : -1;
+      return {
+        totalUnits: acc.totalUnits + sign * t.units,
+        totalInvestedCapital:
+          acc.totalInvestedCapital + sign * t.investedCapitalUSD,
+        totalCapitalOutput:
+          acc.totalCapitalOutput + sign * t.totalCapitalOutputUSD,
+        totalTransactionCost: acc.totalTransactionCost + t.transactionCostUSD,
+      };
+    },
+    {
+      totalUnits: 0,
+      totalInvestedCapital: 0,
+      totalCapitalOutput: 0,
+      totalTransactionCost: 0,
+    }
+  );
+}
+
+/**
  * Lists a user's transactions latest-first (date desc, then createdAt desc).
  * When `sinceDate` (YYYY-MM-DD, inclusive) is given, the `by_userId_date`
  * index bounds the scan to that range.
