@@ -1,5 +1,5 @@
 import { Providers } from '@/components/providers';
-import { ConvexAuthNextjsServerProvider } from '@/src/lib/convexAuth';
+import { ConvexAuthNextjsServerProvider } from '@/lib/convexAuth';
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { Suspense } from 'react';

@@ -1,3 +1,3 @@
-import { auth } from "@/src/lib/serverAuth";
+import { auth } from "@/lib/serverAuth";
 
 export const POST = auth.refreshHandler;

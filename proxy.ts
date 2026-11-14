@@ -1,7 +1,7 @@
 import {
   convexAuthNextjsProxy,
   nextjsProxyRedirect,
-} from "@/src/lib/convexAuth";
+} from "@/lib/convexAuth";
 
 export default convexAuthNextjsProxy(async (request, { isAuthenticated }) => {
   const { pathname } = request.nextUrl;
