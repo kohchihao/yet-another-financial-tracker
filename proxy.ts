@@ -1,24 +1,25 @@
 import {
-  convexAuthNextjsMiddleware,
-  createRouteMatcher,
-  nextjsMiddlewareRedirect,
-} from '@convex-dev/auth/nextjs/server';
+  convexAuthNextjsProxy,
+  nextjsProxyRedirect,
+} from "@/src/lib/convexAuth";
 
-const isSignInPage = createRouteMatcher(['/sign-in']);
-const isProtectedRoute = createRouteMatcher(['/dashboard(.*)']);
-
-export default convexAuthNextjsMiddleware(
-  async (request, { convexAuth }) => {
-    if (isSignInPage(request) && (await convexAuth.isAuthenticated())) {
-      return nextjsMiddlewareRedirect(request, '/dashboard');
-    }
-    if (isProtectedRoute(request) && !(await convexAuth.isAuthenticated())) {
-      return nextjsMiddlewareRedirect(request, '/sign-in');
-    }
-  },
-  { cookieConfig: { maxAge: 3 * 24 * 60 * 60 } }, // 3 days
-);
+export default convexAuthNextjsProxy(async (request, { isAuthenticated }) => {
+  const { pathname } = request.nextUrl;
+  const isSignInPage = pathname === "/sign-in";
+  const isDashboard =
+    pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  if (!isSignInPage && !isDashboard) {
+    return;
+  }
+  const authed = await isAuthenticated();
+  if (isSignInPage && authed) {
+    return nextjsProxyRedirect(request, "/dashboard");
+  }
+  if (isDashboard && !authed) {
+    return nextjsProxyRedirect(request, "/sign-in");
+  }
+});
 
 export const config = {
-  matcher: ['/((?!.*\\..*|_next).*)', '/', '/(api|trpc)(.*)'],
+  matcher: ["/((?!auth(?:/|$)|_next/static|_next/image|favicon.ico).*)"],
 };
