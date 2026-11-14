@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { registerCore } from "@convex-dev/auth/test";
 import { convexTest } from "convex-test";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { API_KEY_DISPLAY_LENGTH } from "./lib/apiKeys";
@@ -39,6 +39,44 @@ function setup() {
   const t = convexTest(schema, modules);
   registerCore(t);
   return t;
+}
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function seedRefreshableSession(t: TestConvex, userId: string, rawToken: string) {
+  const hash = await sha256Hex(rawToken);
+  await (
+    t as TestConvex & {
+      runInComponent: (
+        name: string,
+        handler: (ctx: {
+          db: {
+            insert: (table: string, doc: Record<string, unknown>) => Promise<string>;
+          };
+        }) => Promise<void>,
+      ) => Promise<void>;
+    }
+  ).runInComponent("auth", async (ctx) => {
+    const sessionId = await ctx.db.insert("sessions", {
+      userId,
+      component: "auth",
+    });
+    await ctx.db.insert("refreshTokens", {
+      hash,
+      sessionId,
+      state: "issued",
+    });
+  });
 }
 
 test("createApiKey returns a key for a v2 session and rejects a signed-out caller", async () => {
@@ -138,5 +176,41 @@ test("fetchCspxPrice auth gate allows a v2 session and rejects a signed-out call
     expect(quote.currency).toBe("USD");
   } finally {
     globalThis.fetch = realFetch;
+  }
+});
+
+test("refresh refuses a session older than 3 days", async () => {
+  process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
+  const start = Date.parse("2026-01-01T00:00:00Z");
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(start);
+  try {
+    const t = setup();
+    const userId = await t.mutation(internal.users.createUser, {
+      method: {
+        name: "github",
+        profile: {
+          id: "1000001",
+          login: "marcus-fake",
+          emailVerified: true,
+        },
+      },
+    });
+
+    await seedRefreshableSession(t, userId, "old-token");
+    vi.setSystemTime(start + THREE_DAYS_MS - 1000);
+    await seedRefreshableSession(t, userId, "fresh-token");
+    const fresh = await t.mutation(api.auth.refreshSession, {
+      refreshToken: "fresh-token",
+    });
+    expect(fresh.kind).toBe("rotated");
+
+    vi.setSystemTime(start + THREE_DAYS_MS + 1000);
+    const expired = await t.mutation(api.auth.refreshSession, {
+      refreshToken: "old-token",
+    });
+    expect(expired).toEqual({ kind: "noSession" });
+  } finally {
+    vi.useRealTimers();
   }
 });

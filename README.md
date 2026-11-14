@@ -37,6 +37,14 @@ Convex env vars live on the deployment, not in `.env.local`. Check them with `np
 
 `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET`, `ALLOWED_GITHUB_LOGIN` (the allowed GitHub **email**)
 
+A local `npx convex dev` push fails until those three exist on the local deployment. Placeholders are enough:
+
+```bash
+npx convex env set AUTH_GITHUB_CLIENT_ID dummy
+npx convex env set AUTH_GITHUB_CLIENT_SECRET dummy
+npx convex env set ALLOWED_GITHUB_LOGIN you@example.com
+```
+
 The GitHub OAuth app's callback URL is `https://<deployment>.convex.site/oauth/github/callback`.
 
 ## Testing the MCP server locally
