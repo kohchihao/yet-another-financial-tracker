@@ -22,10 +22,14 @@ deployment=$(grep -E '^CONVEX_DEPLOYMENT=' "$ROOT/.env.local" | head -n 1 | cut 
 convex_url=$(grep -E '^NEXT_PUBLIC_CONVEX_URL=' "$ROOT/.env.local" | head -n 1 | cut -d= -f2-)
 site_url=$(grep -E '^NEXT_PUBLIC_CONVEX_SITE_URL=' "$ROOT/.env.local" | head -n 1 | cut -d= -f2-)
 
-if [ "$deployment" != "anonymous:$CONVEX_INSTANCE_NAME" ]; then
-  echo "FAIL doctor: CONVEX_DEPLOYMENT=$deployment (expected anonymous:$CONVEX_INSTANCE_NAME)" >&2
-  exit 1
-fi
+case "$deployment" in
+  anonymous:?*) ;;
+  *)
+    echo "FAIL doctor: CONVEX_DEPLOYMENT=$deployment (expected anonymous:<name>)" >&2
+    exit 1
+    ;;
+esac
+expected_instance=${deployment#anonymous:}
 if [ "$convex_url" != "$CONVEX_URL_DEFAULT" ]; then
   echo "FAIL doctor: NEXT_PUBLIC_CONVEX_URL=$convex_url (expected $CONVEX_URL_DEFAULT)" >&2
   exit 1
@@ -37,8 +41,8 @@ fi
 
 instance=$(curl -fsS --max-time 5 "$convex_url/instance_name")
 running=$(curl -fsS --max-time 5 "$convex_url/")
-if [ "$instance" != "$CONVEX_INSTANCE_NAME" ]; then
-  echo "FAIL doctor: instance_name=$instance" >&2
+if [ "$instance" != "$expected_instance" ]; then
+  echo "FAIL doctor: instance_name=$instance (expected $expected_instance from .env.local)" >&2
   exit 1
 fi
 case "$running" in

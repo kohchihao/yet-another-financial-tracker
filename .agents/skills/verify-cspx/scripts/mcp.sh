@@ -60,12 +60,17 @@ fi
 # 1. Ensure a users row exists (import writes the document; no auth function inserts users).
 # 2. Call the public createApiKey action with a CLI identity whose subject is
 #    "<users id>|verify-cspx". getAuthUserId (convex-auth v1) reads the id before the first "|".
-#    storeApiKey is internal and calls getAuthUserId again; on Convex 1.34.1 the action
-#    forwards that identity into runMutation, so the insert succeeds.
+#    storeApiKey is internal and calls getAuthUserId again; the action forwards
+#    that CLI identity into runMutation, so the insert succeeds.
 users_json=$(npx convex data users --format json)
 user_id=$(USERS_JSON="$users_json" EMAIL="$EMAIL" python3 - <<'PY'
 import json, os
-rows = json.loads(os.environ["USERS_JSON"])
+text = os.environ["USERS_JSON"].strip()
+# Convex 1.50 prints this sentence for an empty table instead of [].
+if not text or text.startswith("There are no documents"):
+    rows = []
+else:
+    rows = json.loads(text)
 email = os.environ["EMAIL"]
 match = [row["_id"] for row in rows if row.get("email") == email]
 print(match[0] if match else "")
@@ -78,7 +83,12 @@ if [ -z "$user_id" ]; then
   users_json=$(npx convex data users --format json)
   user_id=$(USERS_JSON="$users_json" EMAIL="$EMAIL" python3 - <<'PY'
 import json, os
-rows = json.loads(os.environ["USERS_JSON"])
+text = os.environ["USERS_JSON"].strip()
+# Convex 1.50 prints this sentence for an empty table instead of [].
+if not text or text.startswith("There are no documents"):
+    rows = []
+else:
+    rows = json.loads(text)
 email = os.environ["EMAIL"]
 match = [row["_id"] for row in rows if row.get("email") == email]
 print(match[0] if match else "")

@@ -32,16 +32,15 @@ if [ -f "$EVIDENCE/next.pid" ] && kill -0 "$(cat "$EVIDENCE/next.pid")" 2>/dev/n
   exit 1
 fi
 
-export CONVEX_AGENT_MODE=anonymous
 unset CONVEX_DEPLOY_KEY
+unset CONVEX_AGENT_MODE
 
-echo "launch: CONVEX_DEPLOY_KEY is unset, CONVEX_AGENT_MODE=anonymous"
-echo "launch: starting \`npx convex dev\` (log: $EVIDENCE/convex-dev.log)"
+echo "launch: CONVEX_DEPLOY_KEY is unset, CONVEX_AGENT_MODE is unset"
+echo "launch: starting \`npx convex dev\` with stdin closed (log: $EVIDENCE/convex-dev.log)"
 
-# `script` allocates a TTY so the CLI flushes "Convex functions ready!" immediately.
-# CONVEX_AGENT_MODE=anonymous skips the "login or run locally" prompt that a TTY
-# would otherwise show, and a non-interactive shell without it crashes on that prompt.
-setsid script -q -f -e -c "npx convex dev" "$EVIDENCE/convex-dev.log" &
+# Stdin is not a terminal. On Convex 1.50 that is the path that starts a local
+# anonymous deployment without a login prompt.
+setsid stdbuf -oL -eL npx convex dev >"$EVIDENCE/convex-dev.log" 2>&1 </dev/null &
 echo $! >"$EVIDENCE/convex.pid"
 echo "launch: convex pid $(cat "$EVIDENCE/convex.pid")"
 
@@ -64,9 +63,18 @@ if [ "$ready" -ne 1 ]; then
   exit 1
 fi
 
+deployment=$(grep -E '^CONVEX_DEPLOYMENT=' "$ROOT/.env.local" | head -n 1 | cut -d= -f2-)
+case "$deployment" in
+  anonymous:?*) ;;
+  *)
+    echo "FAIL launch: CONVEX_DEPLOYMENT=$deployment (expected anonymous:<name>)" >&2
+    exit 1
+    ;;
+esac
+expected_instance=${deployment#anonymous:}
 instance=$(curl -fsS --max-time 5 "$CONVEX_URL_DEFAULT/instance_name")
-if [ "$instance" != "$CONVEX_INSTANCE_NAME" ]; then
-  echo "FAIL launch: $CONVEX_URL_DEFAULT/instance_name returned '$instance', expected $CONVEX_INSTANCE_NAME" >&2
+if [ "$instance" != "$expected_instance" ]; then
+  echo "FAIL launch: $CONVEX_URL_DEFAULT/instance_name returned '$instance', expected $expected_instance" >&2
   exit 1
 fi
 

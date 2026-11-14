@@ -16,8 +16,6 @@ EVIDENCE="${VERIFY_CSPX_EVIDENCE:-/tmp/verify-cspx-evidence}"
 ORIGIN="${VERIFY_CSPX_ORIGIN:-http://localhost:3000}"
 PLAYWRIGHT_PREFIX="${VERIFY_CSPX_PLAYWRIGHT:-/tmp/verify-cspx-playwright}"
 
-# Default local anonymous deployment written by `npx convex dev` with
-# CONVEX_AGENT_MODE=anonymous (convex 1.34.1).
+# Loopback ports a local `npx convex dev` binds on Convex 1.50.
 CONVEX_URL_DEFAULT="http://127.0.0.1:3210"
 CONVEX_SITE_URL_DEFAULT="http://127.0.0.1:3211"
-CONVEX_INSTANCE_NAME="anonymous-agent"

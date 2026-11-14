@@ -58,7 +58,7 @@ npx convex run apiKeys:createApiKey '{"name":"verify-cspx"}' \
   --identity "{\"subject\":\"${user_id}|verify-cspx\"}"
 ```
 
-The result is `{ "key": "yaft_…", "prefix": "yaft_…" }`. `storeApiKey` sees the same identity, so the hash is stored for that user id. `verifyApiKey` then finds the hash. This was run against Convex 1.34.1 on the anonymous local deployment; it does not need a code change.
+The result is `{ "key": "yaft_…", "prefix": "yaft_…" }`. `storeApiKey` sees the same identity, so the hash is stored for that user id. `verifyApiKey` then finds the hash. This does not need a code change on the local anonymous deployment.
 
 Do not pass `--prod`. Keep the raw key in `$VERIFY_CSPX_EVIDENCE/api-key.json` (mode 600). `mcp-key-meta.txt` stores the user id and the prefix only.
 

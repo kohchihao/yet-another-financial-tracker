@@ -13,13 +13,12 @@ Run the checks in this order: Launch, Doctor, Drive, then Cleanup. Evidence stay
 
 ## Launch
 
-From the repo root. Do not export `CONVEX_DEPLOY_KEY`. If it is already set, unset it before starting — a deploy key would point the CLI at a cloud deployment.
+From the repo root. Do not export `CONVEX_DEPLOY_KEY`. If it is already set, unset it before starting — a deploy key would point the CLI at a cloud deployment. Do not set `CONVEX_AGENT_MODE`.
 
-Convex CLI 1.34.1 (the version in `package.json`) prompts on a TTY ("Start without an account" vs "Login") and **crashes** in a non-interactive shell with `Cannot prompt for input in non-interactive terminals`. `CONVEX_AGENT_MODE=anonymous` is the switch that makes `npx convex dev` provision a local deployment by itself, with no login and no deploy key. The deployment name is then `anonymous-agent`.
+On Convex 1.50, `npx convex dev` with no deploy key and with stdin not a terminal provisions a local anonymous backend by itself. Observed with `npx convex dev --once`: it printed `Setting up a new project...`, `Configured a local deployment for http://127.0.0.1:3210`, `[Local] Port 3210 • No Convex account`, and `Convex functions ready!`. It did not ask to log in.
 
 ```bash
 unset CONVEX_DEPLOY_KEY
-export CONVEX_AGENT_MODE=anonymous
 npx convex dev
 ```
 
@@ -30,22 +29,16 @@ Ports the local backend binds:
 | 127.0.0.1:3210 | Convex client URL. Written to `.env.local` as `NEXT_PUBLIC_CONVEX_URL`. |
 | 127.0.0.1:3211 | Convex HTTP actions. Written as `NEXT_PUBLIC_CONVEX_SITE_URL`. GitHub's OAuth callback is `http://127.0.0.1:3211/api/auth/callback/github`. |
 | 127.0.0.1:6790 | Local Convex dashboard. |
-| 127.0.0.1:6791 | Local deployment list the dashboard reads. |
 
-Ready when the log prints `Convex functions ready!` and:
-
-```bash
-curl -fsS http://127.0.0.1:3210/instance_name
-# anonymous-agent
-```
-
-`.env.local` then contains:
+Ready when the log prints `Convex functions ready!` and `curl -fsS http://127.0.0.1:3210/instance_name` prints the same name `.env.local` stored after `anonymous:`. A fresh run in this checkout wrote:
 
 ```text
-CONVEX_DEPLOYMENT=anonymous:anonymous-agent
+CONVEX_DEPLOYMENT=anonymous:anonymous-workspace
 NEXT_PUBLIC_CONVEX_URL=http://127.0.0.1:3210
 NEXT_PUBLIC_CONVEX_SITE_URL=http://127.0.0.1:3211
 ```
+
+`anonymous-workspace` is `anonymous-` plus the directory name. An existing `anonymous:` value in `.env.local` is reused instead.
 
 In a second terminal, from the repo root:
 
@@ -61,7 +54,7 @@ The shipped helper runs those two commands, waits for those ready lines, and rec
 .agents/skills/verify-cspx/scripts/launch.sh
 ```
 
-The first anonymous `npx convex dev` on a machine can print `Installing Convex agent skills` and rewrite `skills-lock.json` and `convex/_generated/ai/ai-files.state.json`. That rewrite is not part of this skill. Restore those two files if you did not mean to change them. Do not commit `.env.local` or `.convex/`.
+On Convex 1.50 this command printed `Your Convex AI files are out of date` and did not rewrite those files. It can still regenerate `convex/_generated/server.js` and `server.d.ts` (an `env` export). Restore that codegen if you did not mean to change it. Do not commit `.env.local` or `.convex/`.
 
 If `.env.local` already names a deployment that does not start with `anonymous:`, stop. Do not point this skill at a cloud deployment.
 
@@ -76,8 +69,8 @@ One read-only check that the running instance is this app's local anonymous back
 It passes only when all of these are true:
 
 - `CONVEX_DEPLOY_KEY` is unset in the environment and absent from `.env.local`.
-- `.env.local` has `CONVEX_DEPLOYMENT=anonymous:anonymous-agent`, `NEXT_PUBLIC_CONVEX_URL=http://127.0.0.1:3210`, and `NEXT_PUBLIC_CONVEX_SITE_URL=http://127.0.0.1:3211`.
-- `curl -fsS http://127.0.0.1:3210/instance_name` prints `anonymous-agent`.
+- `.env.local` has `CONVEX_DEPLOYMENT=anonymous:<name>`, `NEXT_PUBLIC_CONVEX_URL=http://127.0.0.1:3210`, and `NEXT_PUBLIC_CONVEX_SITE_URL=http://127.0.0.1:3211`.
+- `curl -fsS http://127.0.0.1:3210/instance_name` prints that same `<name>`.
 - `curl -fsS http://127.0.0.1:3210/` starts with `This Convex deployment is running.`
 - `curl -fsS http://localhost:3000/sign-in` contains `Qian Inc.` and `Sign in with GitHub`.
 
