@@ -38,7 +38,7 @@ npm run deploy:convex  # Push convex/ to production
 
 ### Auth
 
-GitHub OAuth via `@convex-dev/auth`. Access is restricted to a single authorized account via the `ALLOWED_GITHUB_LOGIN` env var checked in `convex/auth.ts`. Unauthenticated users are redirected to `/sign-in`.
+GitHub OAuth via `@convex-dev/auth` v2. `convex/auth.ts` wires `setupGithub`; the auth and GitHub components are mounted in `convex/convex.config.ts`. Access is restricted to one account: `onSignIn` in `convex/users.ts` accepts only a verified GitHub email equal to `ALLOWED_GITHUB_LOGIN`. Unauthenticated users are redirected to `/sign-in`.
 
 ### MCP server
 
