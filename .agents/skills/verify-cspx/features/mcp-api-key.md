@@ -41,7 +41,7 @@ Pass requires:
 
 ### Minting a valid key on the local backend
 
-`createApiKey` and the internal `storeApiKey` both call `getAuthUserId`. There is no public function that inserts a user. The CLI can still do it, because `npx convex import` writes a `users` document and `npx convex run --identity` supplies the subject `getAuthUserId` splits on `|`.
+`createApiKey` and the internal `storeApiKey` both call `getAuthUserId`. On Convex Auth v2 that helper treats `identity.subject` as a session id, loads the session from the `auth` component (`public.getSession`), and returns `session.userId`. A subject of `"<user id>|…"` does not resolve. The CLI still does this without a new Convex function: import the user, import a session row whose `userId` is that user, and pass the session id as the subject.
 
 1. Reuse a `users` row whose email is `verify-cspx@localhost`, or import one:
 
@@ -51,14 +51,22 @@ npx convex import --table users --format jsonLines --append --yes users.jsonl
 npx convex data users --format json
 ```
 
-2. Run the action as that user. `scripts/mcp.sh` reads `_id` from the JSON and passes it as the identity subject (`getAuthUserId` keeps the text before the first `|`):
+2. Reuse an `auth` component `sessions` row for that user, or import one. `getSession` only needs the row to exist; it does not check a refresh token.
+
+```bash
+printf '%s\n' "{\"userId\":\"${user_id}\",\"component\":\"auth\"}" > sessions.jsonl
+npx convex import --component auth --table sessions --format jsonLines --append --yes sessions.jsonl
+npx convex data sessions --component auth --format json
+```
+
+3. Run the action as that session. `scripts/mcp.sh` reads the session `_id` and passes it as the identity subject:
 
 ```bash
 npx convex run apiKeys:createApiKey '{"name":"verify-cspx"}' \
-  --identity "{\"subject\":\"${user_id}|verify-cspx\"}"
+  --identity "{\"subject\":\"${session_id}\"}"
 ```
 
-The result is `{ "key": "yaft_…", "prefix": "yaft_…" }`. `storeApiKey` sees the same identity, so the hash is stored for that user id. `verifyApiKey` then finds the hash. This does not need a code change on the local anonymous deployment.
+The result is `{ "key": "yaft_…", "prefix": "yaft_…" }`. `storeApiKey` sees the same identity, resolves the same user, and stores the hash. `verifyApiKey` then finds the hash. This does not need an app or `convex/` code change, and it does not set a deploy key.
 
 Do not pass `--prod`. Keep the raw key in `$VERIFY_CSPX_EVIDENCE/api-key.json` (mode 600). `mcp-key-meta.txt` stores the user id and the prefix only.
 
@@ -68,4 +76,4 @@ Do not pass `--prod`. Keep the raw key in `$VERIFY_CSPX_EVIDENCE/api-key.json` (
 - `Accept` must include `application/json` and `text/event-stream`. That is what `mcp-handler` expects for Streamable HTTP.
 - A key that does not start with `yaft_` is also a 401 (the prefix check throws, `verifyApiKey` returns null). The bad-key check uses a `yaft_` prefix so it reaches the hash lookup.
 - The raw key is shown once. Do not commit `api-key.json`, and do not paste the key into the skill or a pull request.
-- This check applies on auth v1. It does not need `AUTH_GITHUB_ID`, a browser session, or a new Convex function.
+- This check applies on auth v2. It does not need `AUTH_GITHUB_CLIENT_ID`, a browser session, or a new Convex function.

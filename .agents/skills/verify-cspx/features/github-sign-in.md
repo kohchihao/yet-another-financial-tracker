@@ -2,12 +2,12 @@
 
 ## Sub-features
 
-- On `/sign-in`, clicking **Sign in with GitHub** starts the Convex Auth v1 GitHub provider.
-- The browser is sent to `https://github.com/login/oauth/authorize` (scope `read:user user:email`, PKCE S256, `redirect_uri` `http://127.0.0.1:3211/api/auth/callback/github`).
-- With no GitHub session, GitHub responds by navigating to `https://github.com/login` with `return_to` set to `/login/oauth/authorize?...`. Either URL is a pass.
+- On `/sign-in`, clicking **Sign in with GitHub** calls `useSignInWithGithub(api.auth)` with no `redirectTo`, so GitHub returns to this page.
+- The browser requests `https://github.com/login/oauth/authorize`. That request's `redirect_uri` ends in `/oauth/github/callback` (on the local backend, `http://127.0.0.1:3211/oauth/github/callback`).
+- With no GitHub session, GitHub responds by navigating to `https://github.com/login` with `return_to` set to `/login/oauth/authorize?...`. Either URL is a pass, and the authorize request still has to carry the callback above.
 - The check stops there. It does not type a username, password, or 2FA code, and it does not click GitHub's own Sign in button.
 
-The button is `components/auth/SignInButton.tsx`. Its click handler is `signIn("github", { redirectTo: "/dashboard" })` from `@convex-dev/auth/react`. The provider is `GitHub({ issuer: "https://github.com/login/oauth" })` in `convex/auth.ts`, whose authorize URL is `https://github.com/login/oauth/authorize`.
+The button is `components/auth/SignInButton.tsx`. It uses `useSignInWithGithub` and `useOauth` from `@convex-dev/auth/methods/github/react`. The backend mounts the GitHub component at `httpPrefix: "/oauth/github"`, and that prefix is the callback path.
 
 ## How to get to it (user POV)
 
@@ -30,28 +30,21 @@ Pass requires:
 
 - The final URL matches that predicate.
 - At least one request URL contained `https://github.com/login/oauth/authorize`.
+- That authorize request's `redirect_uri` query parameter ends with `/oauth/github/callback`.
 - `#login_field`, if GitHub rendered it, is empty. The script never fills it.
 
 `{ exact: true }` matters. GitHub's own submit button is named `Sign in`, and a substring match would be the wrong control. This check never clicks that button.
 
 The screenshot is `$VERIFY_CSPX_EVIDENCE/github-authorize.png`. The final URL and the authorize request URLs are in `github-oauth.json`.
 
-### When the GitHub OAuth client id is not set
+### Client id
 
-`npx convex env list` on a fresh local deployment prints `No environment variables set.` `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` are unset. Do not set them for this check, and do not read the secret.
+v2 will not push functions until `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET`, and `ALLOWED_GITHUB_LOGIN` are set. `launch.sh` fills those with non-secret placeholders on the local anonymous deployment when they are missing. Do not replace them with a real GitHub client secret, and do not read the values back. The authorize URL then carries `client_id=verify-cspx-local`.
 
-The provider still builds an authorize URL. With no client id configured, the query parameter is the literal string `client_id=undefined`. GitHub accepts the navigation and redirects to:
-
-```text
-https://github.com/login?client_id=undefined&return_to=%2Flogin%2Foauth%2Fauthorize%3F...
-```
-
-That is a pass. The assertion is the URL shape above, plus the fact that the login form was not submitted. It does not require a real client id, a real secret, or a GitHub account. `github-oauth.json` records `clientIdLiteralUndefined: true` in this case.
-
-If `AUTH_GITHUB_ID` is already present on the local deployment, the authorize URL carries that id instead of `undefined`. The same URL assertion still applies, and the script still does not submit the form or touch `AUTH_GITHUB_SECRET`.
+The check still passes when the query parameter is the literal `client_id=undefined` (GitHub then redirects to `/login` with that authorize URL in `return_to`). Either way the login form must stay empty, and the authorize request's `redirect_uri` must end in `/oauth/github/callback`. `github-oauth.json` records `clientIdLiteralUndefined`.
 
 ## Gotchas
 
-- The button has no error handler. A thrown `signIn` would leave the browser on `/sign-in`. On the current v1 code, a missing client id does not throw; it is stringified into the authorize URL. A run that stays on `/sign-in` is a failure, not a skipped check.
-- Do not follow a successful GitHub login. The app's `createOrUpdateUser` in `convex/auth.ts` also rejects any email other than `ALLOWED_GITHUB_LOGIN`, which is not set locally.
-- The OAuth `redirect_uri` host is `127.0.0.1:3211` (the Convex site URL), not `localhost:3000`. Next proxies `POST /api/auth` to Convex, and the action returns the GitHub URL.
+- A failure to start the flow shows an error on `/sign-in` and does not navigate. A run that stays on `/sign-in` is a failure, not a skipped check.
+- Do not follow a successful GitHub login. `onSignIn` in `convex/users.ts` rejects any email other than `ALLOWED_GITHUB_LOGIN`. This check never gets that far.
+- The OAuth `redirect_uri` host is `127.0.0.1:3211` (the Convex site URL), not `localhost:3000`. The path ends in `/oauth/github/callback`. Starting the flow calls `startSignInWithGithub` on the Convex client; completing it later posts to `/auth/signin`.

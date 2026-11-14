@@ -56,12 +56,15 @@ if ! assert_401 mcp-bad-key "$EVIDENCE/mcp-bad-key.headers" "$EVIDENCE/mcp-bad-k
   fail=1
 fi
 
-# Mint a key without a session and without deployment secrets.
-# 1. Ensure a users row exists (import writes the document; no auth function inserts users).
-# 2. Call the public createApiKey action with a CLI identity whose subject is
-#    "<users id>|verify-cspx". getAuthUserId (convex-auth v1) reads the id before the first "|".
-#    storeApiKey is internal and calls getAuthUserId again; the action forwards
-#    that CLI identity into runMutation, so the insert succeeds.
+# Mint a key without a browser session and without deployment secrets.
+# v2 getAuthUserId does not read a user id out of the identity subject. The
+# subject is a session id. It loads that session from the auth component
+# (public.getSession) and returns session.userId. So:
+# 1. Ensure a users row exists.
+# 2. Ensure an auth-component sessions row points at that user.
+# 3. Call createApiKey with a CLI identity whose subject is that session id.
+#    storeApiKey calls getAuthUserId again; the action forwards the CLI identity
+#    into runMutation, so the insert succeeds.
 users_json=$(npx convex data users --format json)
 user_id=$(USERS_JSON="$users_json" EMAIL="$EMAIL" python3 - <<'PY'
 import json, os
@@ -101,9 +104,46 @@ if [ -z "$user_id" ]; then
   exit 1
 fi
 
-identity=$(USER_ID="$user_id" python3 - <<'PY'
+sessions_json=$(npx convex data sessions --component auth --format json)
+session_id=$(SESSIONS_JSON="$sessions_json" USER_ID="$user_id" python3 - <<'PY'
 import json, os
-print(json.dumps({"subject": os.environ["USER_ID"] + "|verify-cspx"}))
+text = os.environ["SESSIONS_JSON"].strip()
+if not text or text.startswith("There are no documents"):
+    rows = []
+else:
+    rows = json.loads(text)
+user_id = os.environ["USER_ID"]
+match = [row["_id"] for row in rows if row.get("userId") == user_id]
+print(match[0] if match else "")
+PY
+)
+
+if [ -z "$session_id" ]; then
+  printf '%s\n' "{\"userId\":\"$user_id\",\"component\":\"auth\"}" >"$EVIDENCE/sessions.jsonl"
+  npx convex import --component auth --table sessions --format jsonLines --append --yes "$EVIDENCE/sessions.jsonl"
+  sessions_json=$(npx convex data sessions --component auth --format json)
+  session_id=$(SESSIONS_JSON="$sessions_json" USER_ID="$user_id" python3 - <<'PY'
+import json, os
+text = os.environ["SESSIONS_JSON"].strip()
+if not text or text.startswith("There are no documents"):
+    rows = []
+else:
+    rows = json.loads(text)
+user_id = os.environ["USER_ID"]
+match = [row["_id"] for row in rows if row.get("userId") == user_id]
+print(match[0] if match else "")
+PY
+)
+fi
+
+if [ -z "$session_id" ]; then
+  echo "FAIL mcp-valid-key: could not seed an auth session for $user_id" >&2
+  exit 1
+fi
+
+identity=$(SESSION_ID="$session_id" python3 - <<'PY'
+import json, os
+print(json.dumps({"subject": os.environ["SESSION_ID"]}))
 PY
 )
 key_json=$(npx convex run apiKeys:createApiKey '{"name":"verify-cspx"}' --identity "$identity")

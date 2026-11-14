@@ -1,13 +1,15 @@
 ---
 name: verify-cspx
-description: "Prove CSPX Tracker auth and MCP behavior by driving the real app: signed-out /dashboard, the GitHub sign-in handoff, and /api/mcp. Use before and after the Convex Auth v2 migration, and whenever proxy.ts, /sign-in, /dashboard, or /api/mcp changes."
+description: "Prove CSPX Tracker auth and MCP behavior by driving the real app: signed-out /dashboard, the GitHub sign-in handoff, POST /auth/refresh, and /api/mcp. Use when proxy.ts, /sign-in, /dashboard, /auth/refresh, or /api/mcp changes."
 ---
 
 # Verify CSPX Tracker in the browser and over HTTP
 
-CSPX Tracker (this repo) is a single-user Next.js app. Auth today is Convex Auth v1 (`@convex-dev/auth` 0.0.91) with a GitHub provider. `proxy.ts` sends anonymous visitors from `/dashboard` to `/sign-in`. `/api/mcp` accepts a personal API key (`Authorization: Bearer yaft_…`) and rejects anything else with 401.
+CSPX Tracker (this repo) is a single-user Next.js app. Auth is Convex Auth v2 (`@convex-dev/auth` 2.0.0) with a GitHub provider. `proxy.ts` sends anonymous visitors from `/dashboard` to `/sign-in`. `POST /auth/refresh` with no session returns 401 and `{"tokens":null}`. `/api/mcp` accepts a personal API key (`Authorization: Bearer yaft_…`) and rejects anything else with 401.
 
-This skill proves those surfaces against a **local anonymous Convex backend**. It does not log into GitHub, does not set `CONVEX_DEPLOY_KEY`, and does not read or write deployment secrets.
+This skill proves those surfaces against a **local anonymous Convex backend**. It does not log into GitHub, does not set `CONVEX_DEPLOY_KEY`, and does not read or write a cloud deployment's secrets.
+
+`convex.config.ts` declares `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET`, and `ALLOWED_GITHUB_LOGIN` as required, so `npx convex dev` will not push functions until they exist. If the local anonymous deployment has none, `launch.sh` sets non-secret placeholders (`verify-cspx-local`, `verify-cspx-local-not-a-secret`, `verify-cspx@localhost`) on that deployment only. It does not pass `--prod` and it does not print the values.
 
 Run the checks in this order: Launch, Doctor, Drive, then Cleanup. Evidence stays on disk after Cleanup.
 
@@ -27,7 +29,7 @@ Ports the local backend binds:
 | Port | What |
 | --- | --- |
 | 127.0.0.1:3210 | Convex client URL. Written to `.env.local` as `NEXT_PUBLIC_CONVEX_URL`. |
-| 127.0.0.1:3211 | Convex HTTP actions. Written as `NEXT_PUBLIC_CONVEX_SITE_URL`. GitHub's OAuth callback is `http://127.0.0.1:3211/api/auth/callback/github`. |
+| 127.0.0.1:3211 | Convex HTTP actions. Written as `NEXT_PUBLIC_CONVEX_SITE_URL`. GitHub's OAuth callback is `http://127.0.0.1:3211/oauth/github/callback`. |
 | 127.0.0.1:6790 | Local Convex dashboard. |
 
 Ready when the log prints `Convex functions ready!` and `curl -fsS http://127.0.0.1:3210/instance_name` prints the same name `.env.local` stored after `anonymous:`. A fresh run in this checkout wrote:
@@ -87,7 +89,8 @@ Two harnesses. Playwright (Google Chrome, fresh context, no GitHub cookies) driv
 That installs Playwright under `/tmp/verify-cspx-playwright` (not into this repo), then runs:
 
 1. `scripts/drive-ui.cjs` — signed-out `/dashboard`, then the GitHub button. See `features/signed-out-dashboard.md` and `features/github-sign-in.md`.
-2. `scripts/mcp.sh` — 401 with no key, 401 with a bad key, 200 with a key minted on the local deployment. See `features/mcp-api-key.md`.
+2. `scripts/refresh.sh` — `POST /auth/refresh` with no session. See `features/auth-refresh.md`.
+3. `scripts/mcp.sh` — 401 with no key, 401 with a bad key, 200 with a key minted on the local deployment. See `features/mcp-api-key.md`.
 
 Stdout is one `PASS` or `FAIL` line per check, plus the captured URL or response body. The process exits non-zero if any check fails. Do not loosen an assertion to make a run pass.
 
@@ -100,7 +103,8 @@ Default directory: `/tmp/verify-cspx-evidence` (`VERIFY_CSPX_EVIDENCE` overrides
 | `convex-dev.log`, `next-dev.log`, `convex.pid`, `next.pid` | Processes this skill started. |
 | `doctor.txt` | Doctor output. |
 | `signed-out.json`, `dashboard-redirect-sign-in.png` | 307 from `/dashboard` to `/sign-in`, and the page. |
-| `github-oauth.json`, `github-authorize.png` | GitHub URL after the button click. The JSON includes the authorize request URL. |
+| `github-oauth.json`, `github-authorize.png` | GitHub URL after the button click. The JSON includes the authorize request URL and its `redirect_uri`. |
+| `auth-refresh.headers`, `auth-refresh.body` | 401 `{"tokens":null}` from `POST /auth/refresh` with no session. |
 | `mcp-no-key.headers`, `mcp-no-key.body` | 401 with no key. |
 | `mcp-bad-key.headers`, `mcp-bad-key.body` | 401 with `Bearer yaft_not-a-real-key`. |
 | `mcp-ok.headers`, `mcp-ok.body` | 200 initialize result. |
@@ -131,6 +135,6 @@ All of these live in `.agents/skills/verify-cspx/scripts/` and are executable. `
 .agents/skills/verify-cspx/scripts/cleanup.sh
 ```
 
-`drive.sh` calls `scripts/mcp.sh` and `node scripts/drive-ui.cjs`. `scripts/lib.sh` is sourced for the repo root, evidence directory, and origin; do not execute it on its own.
+`drive.sh` calls `scripts/refresh.sh`, `scripts/mcp.sh`, and `node scripts/drive-ui.cjs`. `scripts/lib.sh` is sourced for the repo root, evidence directory, and origin; do not execute it on its own.
 
 Feature notes, selectors, and the local key-minting steps are in `features/README.md`.

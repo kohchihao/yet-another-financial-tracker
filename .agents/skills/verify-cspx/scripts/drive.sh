@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run every v1 check: Playwright for /dashboard and /sign-in, curl for /api/mcp.
+# Run every check: Playwright for /dashboard and /sign-in, curl for /auth/refresh and /api/mcp.
 set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
@@ -14,6 +14,9 @@ fi
 fail=0
 echo "drive: Playwright checks (signed-out dashboard, GitHub OAuth handoff)"
 NODE_PATH="$PLAYWRIGHT_PREFIX/node_modules" node "$ROOT/.agents/skills/verify-cspx/scripts/drive-ui.cjs" || fail=1
+
+echo "drive: curl checks (POST /auth/refresh)"
+bash "$ROOT/.agents/skills/verify-cspx/scripts/refresh.sh" || fail=1
 
 echo "drive: curl checks (/api/mcp)"
 bash "$ROOT/.agents/skills/verify-cspx/scripts/mcp.sh" || fail=1

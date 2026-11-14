@@ -44,11 +44,28 @@ setsid stdbuf -oL -eL npx convex dev >"$EVIDENCE/convex-dev.log" 2>&1 </dev/null
 echo $! >"$EVIDENCE/convex.pid"
 echo "launch: convex pid $(cat "$EVIDENCE/convex.pid")"
 
+# v2 convex.config.ts requires these three before functions will push. They are
+# not GitHub credentials. Placeholders exist only so the local anonymous
+# deployment can load. Never pass --prod, and never read the values back.
+placeholders_set=0
 ready=0
 for _ in $(seq 1 180); do
   if grep -q "Convex functions ready!" "$EVIDENCE/convex-dev.log" 2>/dev/null; then
     ready=1
     break
+  fi
+  if [ "$placeholders_set" -eq 0 ] && grep -q "declared as required in convex.config.ts but their values were not set" "$EVIDENCE/convex-dev.log" 2>/dev/null; then
+    echo "launch: local deployment is missing the required auth env vars; setting non-secret placeholders"
+    placeholder_file=$(mktemp)
+    chmod 600 "$placeholder_file"
+    cat >"$placeholder_file" <<'EOF'
+AUTH_GITHUB_CLIENT_ID=verify-cspx-local
+AUTH_GITHUB_CLIENT_SECRET=verify-cspx-local-not-a-secret
+ALLOWED_GITHUB_LOGIN=verify-cspx@localhost
+EOF
+    npx convex env set --from-file "$placeholder_file"
+    rm -f "$placeholder_file"
+    placeholders_set=1
   fi
   if ! kill -0 "$(cat "$EVIDENCE/convex.pid")" 2>/dev/null; then
     echo "FAIL launch: npx convex dev exited before it was ready. Log follows." >&2
