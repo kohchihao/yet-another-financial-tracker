@@ -15,6 +15,7 @@ export const { startSignInWithGithub, completeSignInWithGithub } = setupGithub(
     allowedRedirectOrigins: [
       "http://localhost:3000",
       "https://fin-koh.vercel.app",
+      "https://stonks.kohchihao.com",
     ],
   },
 ).attachUserCallbacks({
