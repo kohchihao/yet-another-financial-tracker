@@ -16,6 +16,8 @@ export const { startSignInWithGithub, completeSignInWithGithub } = setupGithub(
       "http://localhost:3000",
       "https://fin-koh.vercel.app",
       "https://stonks.kohchihao.com",
+      // Preview origin; removed in task G.
+      "https://fin-koh-git-feat-convex-auth-v2-web-marcus-kohs-projects.vercel.app",
     ],
   },
 ).attachUserCallbacks({
