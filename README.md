@@ -35,9 +35,17 @@ npx convex dev   # log in, pick the existing project; writes .env.local
 
 Convex env vars live on the deployment, not in `.env.local`. Check them with `npx convex env list` (add `--prod` for production). Required:
 
-`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `ALLOWED_GITHUB_LOGIN` (the allowed GitHub **email**), `JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL`
+`AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET`, `ALLOWED_GITHUB_LOGIN` (the allowed GitHub **email**)
 
-The GitHub OAuth app's callback URL is `https://<deployment>.convex.site/api/auth/callback/github`.
+A local `npx convex dev` push fails until those three exist on the local deployment. Placeholders are enough:
+
+```bash
+npx convex env set AUTH_GITHUB_CLIENT_ID dummy
+npx convex env set AUTH_GITHUB_CLIENT_SECRET dummy
+npx convex env set ALLOWED_GITHUB_LOGIN you@example.com
+```
+
+The GitHub OAuth app's callback URL is `https://<deployment>.convex.site/oauth/github/callback`.
 
 ## Testing the MCP server locally
 
@@ -53,7 +61,6 @@ The GitHub OAuth app's callback URL is `https://<deployment>.convex.site/api/aut
 
 ## Deploying
 
-1. `npm run deploy:convex` — pushes functions and schema to production Convex.
-2. Redeploy the Next.js app — the MCP tools in `lib/mcp/` run there, not on Convex.
+The Vercel build command is `npx convex deploy --cmd 'npm run build'`. A merge to `main` deploys Convex production and the Next.js app together. `npm run deploy:convex` is the same Convex push, for a manual production deploy.
 
-Deploy Convex first, so new queries exist before the new frontend calls them.
+Preview builds need a separate Convex preview deploy key. On Vercel, keep the production `CONVEX_DEPLOY_KEY` on Production only, and set a preview deploy key as `CONVEX_DEPLOY_KEY` for Preview only. Preview deployments also need `AUTH_GITHUB_CLIENT_ID`, `AUTH_GITHUB_CLIENT_SECRET`, and `ALLOWED_GITHUB_LOGIN` (from a test GitHub OAuth app).

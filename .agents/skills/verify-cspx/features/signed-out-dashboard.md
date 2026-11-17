@@ -5,7 +5,7 @@
 - A browser with no Convex Auth cookies that opens `http://localhost:3000/dashboard` receives HTTP 307 with `location: /sign-in`, then HTTP 200 on `/sign-in`.
 - The sign-in page shows the text `Qian Inc.`, `Welcome back`, and `Sign in to start planning`, and a button whose accessible name is `Sign in with GitHub`.
 
-`proxy.ts` is the middleware (Next.js 16 does not use `middleware.ts`). `isProtectedRoute` matches `/dashboard(.*)`, and an unauthenticated request gets `nextjsMiddlewareRedirect(request, '/sign-in')`.
+`proxy.ts` is the Next.js 16 proxy (there is no `middleware.ts`). `convexAuthNextjsProxy` sends an unauthenticated `/dashboard` or `/dashboard/*` request to `/sign-in` with `nextjsProxyRedirect`. The matcher keeps `/auth/*` out of the proxy.
 
 ## How to get to it (user POV)
 
@@ -32,6 +32,6 @@ The screenshot is `$VERIFY_CSPX_EVIDENCE/dashboard-redirect-sign-in.png`. The ho
 
 ## Gotchas
 
-- Both processes from Launch have to be up. The middleware asks the Convex backend whether the cookie is authenticated; if port 3210 is down, the redirect does not happen.
-- A signed-in session is sent the other way: `/sign-in` redirects to `/dashboard`. This check uses a new browser context so there is no `__convexAuth` cookie.
+- Next.js has to be up. With no auth cookies, v2 treats the request as signed out without calling Convex, and still redirects.
+- A signed-in session is sent the other way: `/sign-in` redirects to `/dashboard`. This check uses a new browser context so there is no `__convexAuthJWT` or `__convexAuthRefreshToken` cookie.
 - The 307 is on the document request. `curl -D - --max-redirs 0 http://localhost:3000/dashboard` shows the same `HTTP/1.1 307` and `location: /sign-in`. The harness asserts it through Playwright because that is the path a browser takes.

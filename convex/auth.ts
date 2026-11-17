@@ -1,23 +1,26 @@
-import GitHub from '@auth/core/providers/github';
-import { convexAuth } from '@convex-dev/auth/server';
+import { components, internal } from "./_generated/api";
+import { setupConvexAuth } from "@convex-dev/auth/server";
+import { setupGithub } from "@convex-dev/auth/methods/github/server";
 
-export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  // GitHub now sends an `iss` param on the OAuth callback; without a matching
-  // issuer, oauth4webapi rejects it against convex-auth's placeholder issuer.
-  providers: [GitHub({ issuer: 'https://github.com/login/oauth' })],
-  callbacks: {
-    async createOrUpdateUser(ctx, args) {
-      const email = args.profile.email;
-      if (email !== process.env.ALLOWED_GITHUB_LOGIN) {
-        throw new Error('Unauthorized: this application is private.');
-      }
-      if (args.existingUserId) return args.existingUserId;
+const auth = setupConvexAuth({
+  component: components.auth,
+  sessionMaxLifetimeSeconds: 5 * 24 * 60 * 60,
+});
+export const { signOut, refreshSession, isAuthenticated } = auth;
 
-      return ctx.db.insert('users', {
-        email: email,
-        image: args.profile?.image,
-        name: args.profile?.name,
-      });
-    },
+export const { startSignInWithGithub, completeSignInWithGithub } = setupGithub(
+  auth,
+  {
+    component: components.authGithub,
+    allowedRedirectOrigins: [
+      "http://localhost:3000",
+      "https://fin-koh.vercel.app",
+      "https://stonks.kohchihao.com",
+      // Preview origin; removed in task G.
+      "https://fin-koh-git-feat-convex-auth-v2-web-marcus-kohs-projects.vercel.app",
+    ],
   },
+).attachUserCallbacks({
+  createUser: internal.users.createUser,
+  onSignIn: internal.users.onSignIn,
 });

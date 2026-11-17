@@ -105,16 +105,30 @@ function isGithubAuthorizeHandoff(urlString) {
     const authorizeRequests = githubRequests.filter((url) =>
       url.includes("/login/oauth/authorize"),
     );
+    const redirectUris = authorizeRequests.map((url) => {
+      try {
+        return new URL(url).searchParams.get("redirect_uri");
+      } catch {
+        return null;
+      }
+    });
+    const callbackOk = redirectUris.some(
+      (uri) => typeof uri === "string" && uri.endsWith("/oauth/github/callback"),
+    );
     const clientIdUnset = authorizeRequests.some((url) => url.includes("client_id=undefined"));
     const github = {
-      pass: isGithubAuthorizeHandoff(githubUrl) && authorizeRequests.length > 0,
+      pass:
+        isGithubAuthorizeHandoff(githubUrl) &&
+        authorizeRequests.length > 0 &&
+        callbackOk,
+      redirectUris,
       finalUrl: githubUrl,
       authorizeRequests,
       clientIdLiteralUndefined: clientIdUnset,
       loggedIn: false,
       note: clientIdUnset
-        ? "AUTH_GITHUB_ID is unset on this local deployment, so the authorize URL carries client_id=undefined. GitHub then sends the browser to /login with return_to set to /login/oauth/authorize. No secret was read or set, and the login form was not submitted."
-        : "The authorize request included a client_id other than the literal undefined. The check still did not submit GitHub's login form and did not read AUTH_GITHUB_SECRET.",
+        ? "AUTH_GITHUB_CLIENT_ID is unset on this local deployment, so the authorize URL carries client_id=undefined. GitHub then sends the browser to /login with return_to set to /login/oauth/authorize. No secret was read or set, and the login form was not submitted."
+        : "The authorize request included a client_id other than the literal undefined. The check still did not submit GitHub's login form and did not read AUTH_GITHUB_CLIENT_SECRET.",
     };
     writeJson("github-oauth.json", github);
     console.log(github.pass ? "PASS github-sign-in" : "FAIL github-sign-in");
