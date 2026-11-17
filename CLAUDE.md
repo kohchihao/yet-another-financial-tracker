@@ -38,7 +38,7 @@ npm run deploy:convex  # Push convex/ to production
 
 ### Auth
 
-GitHub OAuth via `@convex-dev/auth` v2. `convex/auth.ts` wires `setupGithub`; the auth and GitHub components are mounted in `convex/convex.config.ts`. Access is restricted to one account: `onSignIn` in `convex/users.ts` accepts only a verified GitHub email equal to `ALLOWED_GITHUB_LOGIN`. Unauthenticated users are redirected to `/sign-in`.
+GitHub OAuth via `@convex-dev/auth` v2. `convex/auth.ts` wires `setupGithub`; the auth and GitHub components are mounted in `convex/convex.config.ts`. Access is restricted to one account: `onSignIn` in `convex/users.ts` accepts only a verified GitHub email equal to `ALLOWED_GITHUB_LOGIN`. Sessions last 5 days. Unauthenticated users are redirected to `/sign-in`.
 
 ### MCP server
 
@@ -58,6 +58,8 @@ claude mcp add --transport http cspx-tracker https://<host>/api/mcp --header "Au
 ```
 
 ### Schema
+
+The `users` table stores optional `name`, `email`, and `image`, written by `onSignIn`. v2 `createUser` inserts an empty row.
 
 The `transactions` table stores: `userId`, `type` (BUY/SELL), `date`, `priceUSD`, `units`, `transactionCostUSD`, `investedCapitalUSD`, `totalCapitalOutputUSD`, `createdAt`. Indexed by `by_userId` and `by_userId_date`.
 
