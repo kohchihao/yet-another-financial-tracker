@@ -4,7 +4,7 @@ import { setupGithub } from "@convex-dev/auth/methods/github/server";
 
 const auth = setupConvexAuth({
   component: components.auth,
-  sessionMaxLifetimeSeconds: 3 * 24 * 60 * 60,
+  sessionMaxLifetimeSeconds: 5 * 24 * 60 * 60,
 });
 export const { signOut, refreshSession, isAuthenticated } = auth;
 

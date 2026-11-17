@@ -41,7 +41,7 @@ function setup() {
   return t;
 }
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 
 async function sha256Hex(value: string) {
   const digest = await crypto.subtle.digest(
@@ -179,7 +179,7 @@ test("fetchCspxPrice auth gate allows a v2 session and rejects a signed-out call
   }
 });
 
-test("refresh refuses a session older than 3 days", async () => {
+test("refresh refuses a session older than 5 days", async () => {
   process.env.CONVEX_CLOUD_URL = "http://127.0.0.1:3210";
   const start = Date.parse("2026-01-01T00:00:00Z");
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -197,17 +197,18 @@ test("refresh refuses a session older than 3 days", async () => {
       },
     });
 
-    await seedRefreshableSession(t, userId, "old-token");
-    vi.setSystemTime(start + THREE_DAYS_MS - 1000);
-    await seedRefreshableSession(t, userId, "fresh-token");
-    const fresh = await t.mutation(api.auth.refreshSession, {
-      refreshToken: "fresh-token",
-    });
-    expect(fresh.kind).toBe("rotated");
+    await seedRefreshableSession(t, userId, "inside-token");
+    await seedRefreshableSession(t, userId, "past-token");
 
-    vi.setSystemTime(start + THREE_DAYS_MS + 1000);
+    vi.setSystemTime(start + FIVE_DAYS_MS - 1000);
+    const inside = await t.mutation(api.auth.refreshSession, {
+      refreshToken: "inside-token",
+    });
+    expect(inside.kind).toBe("rotated");
+
+    vi.setSystemTime(start + FIVE_DAYS_MS + 1000);
     const expired = await t.mutation(api.auth.refreshSession, {
-      refreshToken: "old-token",
+      refreshToken: "past-token",
     });
     expect(expired).toEqual({ kind: "noSession" });
   } finally {
