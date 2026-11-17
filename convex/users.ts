@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { vGithubProfile } from "@convex-dev/auth/methods/github/server";
 import { ConvexError, v } from "convex/values";
+import { PRIVATE_APP_MESSAGE } from "./authErrors";
 import { env, internalMutation, query } from "./_generated/server";
 
 const vMethod = v.object({ name: v.literal("github"), profile: vGithubProfile });
@@ -19,7 +20,7 @@ export const onSignIn = internalMutation({
   handler: async (ctx, { method, userId }) => {
     const { profile } = method;
     if (!profile.emailVerified || profile.email !== env.ALLOWED_GITHUB_LOGIN) {
-      throw new ConvexError("Unauthorized: this application is private.");
+      throw new ConvexError(PRIVATE_APP_MESSAGE);
     }
     await ctx.db.patch(userId, {
       name: profile.name,

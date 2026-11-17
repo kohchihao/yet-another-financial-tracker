@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
+import { ConvexError } from "convex/values";
 import { expect, test } from "vitest";
+import { PRIVATE_APP_MESSAGE } from "./authErrors";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 
@@ -66,8 +68,8 @@ test("onSignIn rejects a different email", async () => {
   const userId = await t.mutation(internal.users.createUser, {
     method: method(allowed),
   });
-  await expect(
-    t.mutation(internal.users.onSignIn, {
+  const error = await t
+    .mutation(internal.users.onSignIn, {
       method: method({
         ...allowed,
         id: "2000002",
@@ -75,8 +77,16 @@ test("onSignIn rejects a different email", async () => {
         email: "someone@example.com",
       }),
       userId,
-    }),
-  ).rejects.toThrow("Unauthorized: this application is private.");
+    })
+    .then(
+      () => {
+        throw new Error("onSignIn should have rejected");
+      },
+      (caught: unknown) => caught,
+    );
+  expect(error).toBeInstanceOf(ConvexError);
+  expect((error as ConvexError<string>).data).toBe(PRIVATE_APP_MESSAGE);
+  expect(PRIVATE_APP_MESSAGE).toBe("Unauthorized: this application is private.");
   const user = await t.run(async (ctx) => ctx.db.get(userId));
   expect(user?.email).toBeUndefined();
 });
