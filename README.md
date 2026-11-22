@@ -45,7 +45,7 @@ npx convex env set AUTH_GITHUB_CLIENT_SECRET dummy
 npx convex env set ALLOWED_GITHUB_LOGIN you@example.com
 ```
 
-The GitHub OAuth app's callback URL is `https://<deployment>.convex.site/oauth/github/callback`.
+The GitHub OAuth app's callback URL is `https://<deployment>.convex.site/oauth/github/callback`. Sign-in sessions last 5 days. A user row stores optional `name`, `email`, and `image`.
 
 ## Testing the MCP server locally
 
